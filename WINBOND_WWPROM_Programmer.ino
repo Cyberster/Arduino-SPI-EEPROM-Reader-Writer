@@ -1,98 +1,118 @@
-#define CLK 3
-#define DO 4
-#define CS_BAR 5
-#define WP_BAR 6
-#define DIO 7
-#define HOLD_BAR 8
+#define DATAOUT 11//MOSI
+#define DATAIN  12//MISO
+#define SPICLOCK  13//sck
+#define SLAVESELECT 10//ss
 
-void write_enable() {
-  digitalWrite(CS_BAR, LOW);
-  shiftOut(DIO, CLK, MSBFIRST, 0x06);
-  digitalWrite(CS_BAR, HIGH);
+//opcodes
+#define WREN  0x06
+#define WRDI  0x04
+#define RDSR  0x05
+#define WRSR  0x01
+#define READ  0x03
+#define WRITE 0x02
+
+byte eeprom_output_data;
+byte eeprom_input_data = 0;
+byte clr;
+int address = 0;
+//data buffer
+char buffer [128];
+
+void fill_buffer() {
+  for (int I = 0; I < 128; I++) {
+    buffer[I]=I;
+  }
 }
 
-void write_disable() {
-  digitalWrite(CS_BAR, LOW);
-  pinMode(DIO, OUTPUT);
-  shiftOut(DIO, CLK, MSBFIRST, 0x04);
-  digitalWrite(CS_BAR, HIGH);
-}
-
-byte read_status_register() {
-  digitalWrite(CS_BAR, LOW);
-  pinMode(DIO, OUTPUT);
-  shiftOut(DIO, CLK, MSBFIRST, 0x05);
-  digitalWrite(CLK, HIGH);
-  byte stat = shiftIn(DO, CLK, MSBFIRST);
-  digitalWrite(CS_BAR, HIGH);
-  return stat;
+char spi_transfer(volatile char data) {
+  SPDR = data;                    // Start the transmission
+  while (!(SPSR & (1<<SPIF))) {};    // Wait the end of the transmission
+  return SPDR;                    // return the received byte
 }
 
 void setup() {
-  pinMode(CLK, OUTPUT);
-  pinMode(DO, INPUT);
-  pinMode(CS_BAR, OUTPUT);
-  pinMode(WP_BAR, OUTPUT);
-  pinMode(DIO, OUTPUT); // Initially OUTPUT, but used for both I/O operations
-  pinMode(HOLD_BAR, OUTPUT);
-
-  // W25X80A is clocked by rising edges i.e. both mode0 and mode3 are supported
-  digitalWrite(CLK, LOW); // We'll use SPI mode0
-  
   Serial.begin(9600);
 
-  //write_enable();
-
-//  byte stat = read_status_register();
-//  char buf[80];
-//  sprintf(buf, "status: %02x", stat);
-//  Serial.println(buf);
-
-  /* 10.2.16 - Read Manufacturer / Device ID (90h) */
-  digitalWrite(CS_BAR, LOW);
-  delayMicroseconds(20);
-  digitalWrite(HOLD_BAR, HIGH);
-  digitalWrite(WP_BAR, LOW);
+  pinMode(DATAOUT, OUTPUT);
+  pinMode(DATAIN, INPUT);
+  pinMode(SPICLOCK, OUTPUT);
+  pinMode(SLAVESELECT, OUTPUT);
+  digitalWrite(SLAVESELECT, HIGH); //disable device
+  // SPCR = 01010000
+  //interrupt disabled,spi enabled,msb 1st,master,clk low when idle,
+  //sample on leading edge of clk,system clock/4 rate (fastest)
+  SPCR = (1 << SPE) | (1 << MSTR);
+  clr = SPSR;
+  clr = SPDR;
+  delay(10);
   
-  digitalWrite(CLK, LOW);
-  shiftOut(DIO, CLK, MSBFIRST, 0x90);
-  shiftOut(DIO, CLK, MSBFIRST, 0x00);
-  shiftOut(DIO, CLK, MSBFIRST, 0x00);
-  shiftOut(DIO, CLK, MSBFIRST, 0x00);
-
-  digitalWrite(CLK, HIGH);
-  for (int i = 0; i < 8; i++) {
-      if (i % 2 == 0) digitalWrite(CLK, LOW);
-      else digitalWrite(CLK, HIGH);
-
-      Serial.println(digitalRead(DO));
-  }
-  digitalWrite(CS_BAR, HIGH);
-
-//  digitalWrite(CLK, HIGH);
-//  byte ManufacturerID = shiftIn(DO, CLK, MSBFIRST);
-//  byte DeviceID = shiftIn(DO, CLK, MSBFIRST);
+//  //fill buffer with data
+//  fill_buffer();
 //  
-//  digitalWrite(CS_BAR, HIGH);
-//
-//  char buf[80];
-//  sprintf(buf, "ManufacturerID: %02x, DeviceID: %02x", ManufacturerID, DeviceID);
-//  
-//  Serial.println(buf);
+//  //fill eeprom w/ buffer
+//  digitalWrite(SLAVESELECT,LOW);
+//  spi_transfer(WREN); //write enable
+//  digitalWrite(SLAVESELECT,HIGH);
+//  delay(10);
+//  digitalWrite(SLAVESELECT,LOW);
+//  spi_transfer(WRITE); //write instruction
+//  address=0;
+//  spi_transfer((char)(address>>8));   //send MSByte address first
+//  spi_transfer((char)(address));      //send LSByte address
+//  //write 128 bytes
+//  for (int I = 0; I < 128; I++) {
+//    spi_transfer(buffer[I]); //write data byte
+//  }
+//  digitalWrite(SLAVESELECT,HIGH); //release chip
+//  //wait for eeprom to finish writing
+//  delay(3000);
+//  Serial.write('h');
+//  Serial.write('i');
+//  Serial.write('\n');//debug
+//  delay(1000);
+
+  // read manufacturer id and device id
+  digitalWrite(SLAVESELECT, LOW);
+  spi_transfer(0x90);
+  spi_transfer(0x00);
+  spi_transfer(0x00);
+  spi_transfer(0x00);
+  byte man = spi_transfer(0xFF); //get data byte
+  byte dev = spi_transfer(0xFF); //get data byte
+  digitalWrite(SLAVESELECT, HIGH);
+  delay(10);
+  Serial.println(man, HEX);
+  Serial.println(dev, HEX); 
+
+  // read data
+  digitalWrite(SLAVESELECT, LOW);
+  spi_transfer(READ);
+  spi_transfer(0x00);
+  spi_transfer(0x00);
+  spi_transfer(0x00);
+  byte data = spi_transfer(0xFF);
+  digitalWrite(SLAVESELECT, HIGH);
+  Serial.println(data, HEX);
 }
 
+byte read_eeprom(int EEPROM_address) {
+  //READ EEPROM
+  int data;
+  digitalWrite(SLAVESELECT, LOW);
+  spi_transfer(READ); //transmit read opcode
+  spi_transfer((char)(EEPROM_address >> 8));   //send MSByte address first
+  spi_transfer((char)(EEPROM_address));      //send LSByte address
+  data = spi_transfer(0xFF); //get data byte
+  digitalWrite(SLAVESELECT, HIGH); //release chip, signal end transfer
+  return data;
+}
 
 void loop() {
-//  pinMode(CS_BAR, OUTPUT);
-//  pinMode(HOLD_BAR, OUTPUT);
-//  pinMode(WP_BAR, OUTPUT);
-//  pinMode(CLK, OUTPUT);
-//  pinMode(DO, OUTPUT);
-//  pinMode(DIO, OUTPUT);
-//  digitalWrite(CS_BAR, HIGH);
-//  digitalWrite(HOLD_BAR, HIGH);
-//  digitalWrite(WP_BAR, HIGH);  
-//  digitalWrite(CLK, HIGH);
-//  digitalWrite(DO, HIGH);
-//  digitalWrite(DIO, HIGH);  
+//  eeprom_output_data = read_eeprom(address);
+//  Serial.print(eeprom_output_data,HEX);
+//  Serial.write('\n');
+//  address++;
+//  if (address == 128)
+//    address = 0;
+//  delay(1000); //pause for readability
 }
