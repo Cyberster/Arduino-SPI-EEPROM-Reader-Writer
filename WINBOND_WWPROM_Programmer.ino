@@ -1,8 +1,8 @@
 // pin configurations
-#define DO 11       // MOSI   EEPROM pin 2
-#define DIO  12     // MISO   EEPROM pin 5
-#define CLK  13     // SCK    EEPROM pin 6
-#define CS_BAR 10   // SS     EEPROM pin 1
+#define CS_BAR  10 // SS     EEPROM pin 1
+#define DO      11 // MOSI   EEPROM pin 2
+#define DIO     12 // MISO   EEPROM pin 5
+#define CLK     13 // SCK    EEPROM pin 6
 
 // opcodes for winbond W25X10A, W25X20A, W25X40A, W25X80A EEPROMs
 #define WREN      0x06  // write enable
@@ -21,33 +21,25 @@
 #define INFO      0x90  // get manufacturer & device ID info
 #define JEDEC     0x9F  // get JEDDEC ID
 
-byte eeprom_output_data;
-byte eeprom_input_data = 0;
 byte clr;
-long address = 0;
-//data buffer
-char buffer[256];
-
-void fill_buffer() {
-  for (int I = 0; I < 256; I++) {
-    buffer[I] = I;
-  }
-}
 
 char spi_transfer(volatile char data) {
   SPDR = data;                    // Start the transmission
-  while (!(SPSR & (1<<SPIF))) {};    // Wait the end of the transmission
+  while (!(SPSR & (1<<SPIF))) {}; // Wait the end of the transmission
   return SPDR;                    // return the received byte
 }
 
 void setup() {
+  // Initialize serial and wait for port to open:
   Serial.begin(115200);
+  // wait for serial port to connect. Needed for native USB port only
+  while (!Serial) {}
 
   pinMode(DO, OUTPUT);
   pinMode(DIO, INPUT);
   pinMode(CLK, OUTPUT);
   pinMode(CS_BAR, OUTPUT);
-  digitalWrite(CS_BAR, HIGH); //disable device
+  digitalWrite(CS_BAR, HIGH); // disable device
   // SPCR = 01010000
   //interrupt disabled,spi enabled,msb 1st,master,clk low when idle,
   //sample on leading edge of clk,system clock/4 rate (fastest)
@@ -67,26 +59,29 @@ void setup() {
 //  read_block(0x000000, 16, 20, true);
 
 //  // download entier rom into a file
-  download_rom(true);
+//  download_rom(true);
 
 //  sector_erase(0x000000); // erase 4kB from given address
 //  block_erase(0x000000); // erase 64kB from given address
 //  chip_erase(); // erase the entier chip
 
-  //fill buffer with data
-//  fill_buffer();
-  //write_eeprom(0x00010E, buffer, 256);
-//
+//  // write data to eeprom
+//  // fill buffer with data
+//  byte buffer[256];
+//  for (int I = 0; I < 256; I++) {
+//    buffer[I] = I;
+//  }
+//  write_eeprom(0x00010E, buffer, 256);
 
-  // chip_erase();
+  //chip_erase();
   //upload_rom();
-  //read_block(0x063770, 16, 1024, true);
+  read_block(0x000000, 16, 20, true);
 }
 
+// read data from EEPROM
 byte read_eeprom(int EEPROM_address) {
-  //READ EEPROM
   int data;
-  digitalWrite(CS_BAR, LOW);
+  digitalWrite(CS_BAR, LOW); // Write function
   spi_transfer(READ); //transmit read opcode
   spi_transfer((char)(EEPROM_address >> 16)); //send b2 address first
   spi_transfer((char)(EEPROM_address >> 8));  //send b1 address
@@ -225,7 +220,8 @@ void chip_erase() {
   Serial.println("Operation CHIP ERASE has been executed successfully.");
 }
 
-
+// write data to the EEPROM
+// max buffer size is 256
 void write_eeprom(long address, byte data[], int data_size) {
   digitalWrite(CS_BAR, LOW);
   spi_transfer(WREN); //write enable
@@ -257,6 +253,7 @@ void write_eeprom(long address, byte data[], int data_size) {
   digitalWrite(CS_BAR, HIGH);
 }
 
+// upload data from file to the EEPROM
 void upload_rom() {
   while (!Serial.available()) {}
   byte buff[256];
@@ -282,12 +279,4 @@ void upload_rom() {
   Serial.println("ROM uploaded successfully.");
 }
 
-void loop() {
-//  eeprom_output_data = read_eeprom(address);
-//  Serial.print(eeprom_output_data,HEX);
-//  Serial.write('\n');
-//  address++;
-//  if (address == 128)
-//    address = 0;
-//  delay(1000); //pause for readability
-}
+void loop() {}
