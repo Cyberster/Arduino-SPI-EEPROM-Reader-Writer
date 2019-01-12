@@ -13,20 +13,35 @@ fileName = raw_input("Please enter file name: ")
 
 with open(fileName, mode='rb') as file: # b is important -> binary
 	start = time.time()
-	i = 1
+	#i = 0
+	ser.write('H') # for handshake request
 
 	# whole file at a time
 	#fileContent = file.read()
 
 	# 1 byte at a time
-	while 1:
+	for i in range(4096): # 4096 x 256 bytes = 1MB
+		# wait until arduino requests 'R' i.e. 256 bytes of data
+		while (ser.read() != 'R'): continue
+
+		for j in range(256):
+			byte_s = file.read(1)
+			if not byte_s: break
+			byte = byte_s[0]
+			ser.write(byte)
+		'''byte_s = file.read(256)
+		if not byte_s: break
+		ser.write(byte_s)'''
+		print str((i + 1) * 256), 'bytes of', MEMORY_SIZE, 'bytes has been uploaded.'
+		
+	'''while 1:
 		byte_s = file.read(1)
 		if not byte_s:
 			break
 		byte = byte_s[0]
 		ser.write(byte)
-		print str(i), 'bytes of', MEMORY_SIZE, 'bytes has been uploaded.'
-		i += 1
+		print str(i + 1), 'bytes of', MEMORY_SIZE, 'bytes has been uploaded.'
+		i += 1'''
 
 	status = ser.readline()
 	print(status)

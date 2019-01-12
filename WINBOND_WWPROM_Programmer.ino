@@ -33,7 +33,7 @@ void setup() {
   // Initialize serial and wait for port to open:
   Serial.begin(115200);
   // wait for serial port to connect. Needed for native USB port only
-  while (!Serial) {}
+  while (!Serial);
 
   pinMode(DO, OUTPUT);
   pinMode(DIO, INPUT);
@@ -59,7 +59,7 @@ void setup() {
 //  read_block(0x000000, 16, 20, true);
 
 //  // download entier rom into a file
-//  download_rom(true);
+  download_rom(true);
 
 //  sector_erase(0x000000); // erase 4kB from given address
 //  block_erase(0x000000); // erase 64kB from given address
@@ -72,10 +72,9 @@ void setup() {
 //    buffer[I] = I;
 //  }
 //  write_eeprom(0x00010E, buffer, 256);
-
   //chip_erase();
   //upload_rom();
-  read_block(0x000000, 16, 20, true);
+  //read_block(0x000000, 16, 20, true);
 }
 
 // read data from EEPROM
@@ -226,7 +225,8 @@ void write_eeprom(long address, byte data[], int data_size) {
   digitalWrite(CS_BAR, LOW);
   spi_transfer(WREN); //write enable
   digitalWrite(CS_BAR, HIGH);
-  delay(10);
+  delayMicroseconds(5);
+  
   digitalWrite(CS_BAR, LOW);
   spi_transfer(WRITE); //write instruction
   spi_transfer((byte)((address >> 16) & 0x0000FF));  // send b2 address first
@@ -246,7 +246,7 @@ void write_eeprom(long address, byte data[], int data_size) {
   
   digitalWrite(CS_BAR, HIGH); //release chip
   //wait for eeprom to finish writing
-  delay(3); // tpp = 1.5-3ms
+  delayMicroseconds(1500); // tpp = 1.5-3ms
   
   digitalWrite(CS_BAR, LOW);
   spi_transfer(WRDI); //write disable
@@ -256,10 +256,17 @@ void write_eeprom(long address, byte data[], int data_size) {
 // upload data from file to the EEPROM
 void upload_rom() {
   while (!Serial.available()) {}
+  while (Serial.read() != 'H'); // wait for handshake request from cmoputer
+  
   byte buff[256];
 
   // 1 page at a time where page size = 256 byte
-  for (long address = 0; address <= 0x0FFFFF; address += 256) {
+  for (long address = 0; address <= 0x0FFFFF; address += 256) { //0x0FFFFF
+    Serial.write('R'); // requests 256 bytes of data
+    while (!Serial.available()) {
+      // wait for computer  
+    }
+
     Serial.readBytes(buff, 256);
     write_eeprom(address, buff, 256);
   }
