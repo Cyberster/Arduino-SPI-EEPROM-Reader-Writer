@@ -1,3 +1,7 @@
+## Author: Arpan Das
+## Date:   Fri Jan 11 12:16:59 2019 +0530
+## URL: https://github.com/Cyberster/SPI-Based-EEPROM-Reader-Writer
+
 ## It listens to serial port and send data to serial port
 ## requires pySerial to be installed 
 import sys 

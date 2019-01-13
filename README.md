@@ -17,3 +17,5 @@
 3. Run **upload_rom.py** by entering '**python2.7 upload_rom.py**' in your terminal/cmd window.
 4. Press **reset** button in your arduino.
 5. Enter the file path i.e. '**/path/to/the/file.rom**' and hit enter and wait for finish.
+
+Schematic can be found here: https://easyeda.com/arp14/spi-based-eeprom-reader-writer

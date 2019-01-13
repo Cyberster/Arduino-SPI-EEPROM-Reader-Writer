@@ -1,3 +1,7 @@
+/* Author: Arpan Das
+ * Date:   Fri Jan 11 12:16:59 2019 +0530
+ * URL: https://github.com/Cyberster/SPI-Based-EEPROM-Reader-Writer */
+
 // pin configurations
 #define CS_BAR  10 // SS     EEPROM pin 1
 #define DO      11 // MOSI   EEPROM pin 2
