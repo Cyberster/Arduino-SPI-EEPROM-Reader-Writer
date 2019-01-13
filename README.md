@@ -5,8 +5,8 @@
 
 1. First, make **download_rom()** function only active and flash the sketch into your arduino.
 2. Configure **serial port** and **baud rate** in **download_rom.py** according to your arduino sketch.
-3. Run **download_rom.py** by entering '**python2.7 download_rom.py**' in your terminal/cmd window.
-4. Press **reset** button in your arduino.
+3. Press **reset** button in your arduino.
+4. Run **download_rom.py** by entering '**python2.7 download_rom.py**' in your terminal/cmd window.
 5. Now press '**d**' and hit enter in the prompt in your terminal/cmd window and wait for finish.
 
 

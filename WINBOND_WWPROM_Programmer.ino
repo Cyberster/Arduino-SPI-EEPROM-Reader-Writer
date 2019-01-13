@@ -31,6 +31,8 @@ char spi_transfer(volatile char data) {
 
 void setup() {
   // Initialize serial and wait for port to open:
+  // 1000000 working for upload, not working for download
+  // 115200 working best for both upload and download
   Serial.begin(115200);
   // wait for serial port to connect. Needed for native USB port only
   while (!Serial);
@@ -59,7 +61,7 @@ void setup() {
 //  read_block(0x000000, 16, 20, true);
 
 //  // download entier rom into a file
-  download_rom(true);
+//  download_rom(true);
 
 //  sector_erase(0x000000); // erase 4kB from given address
 //  block_erase(0x000000); // erase 64kB from given address
@@ -73,7 +75,8 @@ void setup() {
 //  }
 //  write_eeprom(0x00010E, buffer, 256);
   //chip_erase();
-  //upload_rom();
+  //upload_rom()
+  download_rom(true);
   //read_block(0x000000, 16, 20, true);
 }
 
@@ -143,29 +146,35 @@ void read_block(long starting_address, int block_size, int block_count, boolean 
 
 void download_rom(boolean fastread) {
   while (!Serial.available()) {}
-  char ch = (char)Serial.read();
+  while (Serial.read() != 'd'); // waiting for handshaking
 
-  if (ch == 'd') {
-    // read data    
+  // reading EEPROM 256 byte at a time for reliability
+  for (long i = 0x000000; i <= 0xFF0000; i += 256) {
+    Serial.write('W'); // response 1 byte of data write request
+    while (Serial.read() != 'G'); // wait for computer grant write request
+
+    // read EEPROM  
     digitalWrite(CS_BAR, LOW);
     if (fastread)
       spi_transfer(FREAD);
     else
       spi_transfer(READ);
-    spi_transfer(0x00);
-    spi_transfer(0x00);
-    spi_transfer(0x00);
+    spi_transfer((byte)((i >> 16) & 0x0000FF));
+    spi_transfer((byte)((i >> 8) & 0x0000FF));
+    spi_transfer((byte)((i) & 0x0000FF));
     if (fastread)
       spi_transfer(0xFF); // adding dummy clock for fast read
-  
-    for (int i = 0x000000; i <= 0xFF0000; i++) {
+
+    for (int j = 0; j < 256; j++) {
       byte data = spi_transfer(0xFF);
       Serial.write(data);
     }
+
     digitalWrite(CS_BAR, HIGH);
-    //Serial.println("EOF");
-    Serial.println("ROM downloaded successfully.");
+    delayMicroseconds(1000);
   }
+  
+  Serial.println("ROM downloaded successfully.");
 }
 
 // erase 4kB from given address
@@ -263,9 +272,7 @@ void upload_rom() {
   // 1 page at a time where page size = 256 byte
   for (long address = 0; address <= 0x0FFFFF; address += 256) { //0x0FFFFF
     Serial.write('R'); // requests 256 bytes of data
-    while (!Serial.available()) {
-      // wait for computer  
-    }
+    while (!Serial.available()); // wait for computer
 
     Serial.readBytes(buff, 256);
     write_eeprom(address, buff, 256);

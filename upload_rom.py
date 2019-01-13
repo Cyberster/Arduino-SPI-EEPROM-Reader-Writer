@@ -6,7 +6,7 @@ import time
 
 MEMORY_SIZE = 1048576 # In bytes
 serial_port = '/dev/ttyACM0'
-baud_rate = 115200; # In arduino, Serial.begin(baud_rate)
+baud_rate = 115200 # In arduino, Serial.begin(baud_rate)
 ser = serial.Serial(serial_port, baud_rate)
 
 fileName = raw_input("Please enter file name: ")
