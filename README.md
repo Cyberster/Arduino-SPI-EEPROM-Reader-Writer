@@ -21,3 +21,6 @@
 ## Schematic
 Schematic can be found here: https://easyeda.com/arp14/spi-based-eeprom-reader-writer
 ![SPI-Based-EEPROM-Reader-Writer Schematic](https://raw.githubusercontent.com/Cyberster/SPI-Based-EEPROM-Reader-Writer/master/Schematic_SPI-Based-EEPROM-Reader-Writer_Sheet-1_20190113165852.png)
+
+## Details about various functions with examples can be found here:
+https://w3epic.com/how-to-read-write-spi-based-serial-eeprom-using-arduino-uno-e-g-winbond-w25x80a/
